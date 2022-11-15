@@ -87,7 +87,36 @@ public:
             node = updateAVL(node);
             return node;
         }
-        
+    };
+    class ParentsTree{
+    public:
+        int parentTreeSize = 0;
+        ParentAVLNode * parentRoot;
+        ParentsTree(){
+            parentTreeSize = 0;
+            this -> parentRoot = nullptr;
+        }
+        ParentsTree(ConcatStringNode * otherN){
+            parentTreeSize = 1;
+            this -> parentRoot = new ParentAVLNode(otherN);
+        }
+        int size() const{
+            return parentTreeSize;
+        }
+        void insertParentTreeNode(ConcatStringNode * otherN){
+            this -> parentRoot = this -> parentRoot -> insertParentAVLNode(otherN, this -> parentRoot);
+            ++parentTreeSize;
+        }
+        string toStringPreOrder(ParentAVLNode * root) const{
+            if (!root) return "";
+            string s = "(id=" + to_string(root -> parentID) + ")" 
+            + ";" + toStringPreOrder(root -> left) + ";" + toStringPreOrder(root -> right);
+        return s;
+        }
+        string toStringPreOrder() const{
+            string ans = "ParentsTree[";
+            return ans + toStringPreOrder(parentRoot) + "]";
+        }
     };
     ConcatStringNode(){
         if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
@@ -145,13 +174,9 @@ public:
     }
 };
 class ConcatStringTree {
-
 public:
     ConcatStringNode * root;
     int treeLength = 0;
-    class ParentsTree{
-
-    };
     ConcatStringTree(){
         root = nullptr;
     }
