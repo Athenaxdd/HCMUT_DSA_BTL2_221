@@ -4,13 +4,6 @@
 #include "main.h"
 class ConcatStringNode { //rope data structure https://www.geeksforgeeks.org/ropes-data-structure-fast-string-concatenation/
 public:
-    string data;
-    int length;
-    ConcatStringNode * left;
-    ConcatStringNode * right;
-    int leftLength;
-    int ID;
-    static int totalID;
     class ParentAVLNode{
     public:
         ConcatStringNode * parent;
@@ -54,6 +47,11 @@ public:
             if (t == NULL) return -1;
             return 1 + max(treeLevel(t -> left), treeLevel(t -> right));
         }
+        ParentAVLNode * minValueNode(ParentAVLNode* node) { 
+            ParentAVLNode * current = node; 
+            while (current -> left)  current = current->left; 
+            return current; 
+        } 
         ParentAVLNode * updateAVL(ParentAVLNode * node){
             if (abs(treeLevel(node -> left) - treeLevel(node -> right)) > 1){
                 if (treeLevel(node -> left) > treeLevel(node -> right)){
@@ -87,6 +85,33 @@ public:
             node = updateAVL(node);
             return node;
         }
+        ParentAVLNode * deleteParentNode(ParentAVLNode * root, int key){
+            if (!root) return nullptr;
+            if (key > root -> parentID) root -> right = deleteParentNode(root -> right, key);
+            else if (key < root -> parentID) root -> left = deleteParentNode(root -> left, key);
+            else {
+                if (!(root -> left) || !(root -> right)){
+                    ParentAVLNode * temp = root -> left ? root -> left : root -> right;
+                    if (temp) {
+                        temp = root;
+                        root = nullptr;
+                    } else root = temp;
+                    delete (temp);
+                } else {
+                    ParentAVLNode * temp = minValueNode(root -> left);
+                    root -> parentID = temp -> parentID;
+                    root -> left = deleteParentNode (root -> left, temp -> parentID);
+                }
+            }
+            if (root == nullptr) return root;
+            root -> height = updateHeight(root);
+            root = updateAVL(root);
+            return root;
+        }
+        ParentAVLNode * deleteParentNode(ParentAVLNode * root, ConcatStringNode * otherN){
+            root = root -> deleteParentNode(root, (int)(otherN -> ID));
+            return root;
+        }
     };
     class ParentsTree{
     public:
@@ -118,9 +143,18 @@ public:
             return ans + toStringPreOrder(parentRoot) + "]";
         }
     };
+    string data;
+    int length;
+    ConcatStringNode * left;
+    ConcatStringNode * right;
+    int leftLength;
+    int ID;
+    // static int totalID;
+    ParentAVLNode * node;
+    ParentsTree * parentTree;
     ConcatStringNode(){
-        if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        this -> ID = ++totalID;
+        // if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
+        // this -> ID = ++totalID;
         this -> data = "";
         this -> length = length;
         this -> left = nullptr;
@@ -128,8 +162,8 @@ public:
         this -> leftLength = 0;
     };
     ConcatStringNode(string data, ConcatStringNode * left = nullptr, ConcatStringNode * right = nullptr){
-        if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        this -> ID = ++totalID;
+        // if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
+        // this -> ID = ++totalID;
         this -> data = data;
         this -> length = length;
         this -> left = left;
@@ -137,8 +171,8 @@ public:
         this -> leftLength = leftLength; 
     }
     ConcatStringNode(const ConcatStringNode * otherN){
-        if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        this -> ID = ++totalID;
+        // if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
+        // this -> ID = ++totalID;
         this -> data = otherN -> data;
         this -> length = otherN -> length;
         this -> left = nullptr;
@@ -168,9 +202,6 @@ public:
     void reverseData(){
         int n = getDataLength();
         for (int i = 0; i < n / 2; i++) swap(data[i], data[n - i - 1]);
-    }
-    ~ConcatStringNode(){
-
     }
 };
 class ConcatStringTree {
@@ -244,7 +275,7 @@ public:
     string toStringPreOrder() const{ //very cool ss
         stringstream ans;
         ans << "ConcatStringTree[" << toStringPreOrder(root) ;
-        ans.seekp(-1,ans.cur);
+        ans.seekp(-1, ans.cur);
         ans << "]";
         return ans.str();
     };
@@ -339,8 +370,25 @@ public:
     };
 
     int getParTreeSize(const string & query) const{
+        ConcatStringNode * temp = this -> root;
+        for (int i = 0; i < query.length(); ++i){
+            if (query[i] == 'l') temp = temp -> left;
+            else if (query[i] == 'r') temp = temp -> right;
+            else throw std::runtime_error("Invalid character of query");
+            if (temp == nullptr) throw runtime_error("Invalid query: reaching NULL");
+        }
+        return temp -> parentTree -> size();
     };
-    string getParTreeStringPreOrder(const string & query) const;
+    string getParTreeStringPreOrder(const string & query) const{
+        ConcatStringNode * temp = this -> root;
+        for (int i = 0; i < query.length(); ++i){
+            if (query[i] == 'l') temp = temp -> left;
+            else if (query[i] == 'r') temp = temp -> right;
+            else throw std::runtime_error("Invalid character of query");
+            if (temp == nullptr) throw runtime_error("Invalid query: reaching NULL");   
+        }
+        return temp -> parentTree -> toStringPreOrder();
+    };
 };
 
 class ReducedConcatStringTree; // forward declaration
