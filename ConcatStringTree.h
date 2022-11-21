@@ -4,6 +4,7 @@
 #include "main.h"
 class ConcatStringNode { //rope data structure https://www.geeksforgeeks.org/ropes-data-structure-fast-string-concatenation/
 public:
+    static int totalID;
     class ParentAVLNode{
     public:
         ConcatStringNode * parent;
@@ -132,11 +133,15 @@ public:
             this -> parentRoot = this -> parentRoot -> insertParentAVLNode(otherN, this -> parentRoot);
             ++parentTreeSize;
         }
+        void deleteParentTreeNode(ConcatStringNode * otherN){
+            this -> parentRoot = this -> parentRoot -> deleteParentNode(this -> parentRoot, otherN);
+            parentTreeSize--;
+        }
         string toStringPreOrder(ParentAVLNode * root) const{
             if (!root) return "";
             string s = "(id=" + to_string(root -> parentID) + ")" 
             + ";" + toStringPreOrder(root -> left) + ";" + toStringPreOrder(root -> right);
-        return s;
+            return s;
         }
         string toStringPreOrder() const{
             string ans = "ParentsTree[";
@@ -149,54 +154,59 @@ public:
     ConcatStringNode * right;
     int leftLength;
     int ID;
-    // static int totalID;
-    ParentAVLNode * node;
-    ParentsTree * parentTree;
+    int strlen(const char * s){
+        int length = 0;
+        while (s[length] != '\0'){
+            length++;
+        }
+        return length;
+    }
+    ParentsTree parentTree;
     ConcatStringNode(){
-        // if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        // this -> ID = ++totalID;
+        if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
+        this -> ID = ++totalID;
         this -> data = "";
         this -> length = length;
         this -> left = nullptr;
         this -> right = nullptr;
         this -> leftLength = 0;
+        this -> parentTree = ParentsTree();
     };
-    ConcatStringNode(string data, ConcatStringNode * left = nullptr, ConcatStringNode * right = nullptr){
-        // if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        // this -> ID = ++totalID;
-        this -> data = data;
-        this -> length = length;
-        this -> left = left;
-        this -> right = right;
-        this -> leftLength = leftLength; 
-    }
     ConcatStringNode(const ConcatStringNode * otherN){
-        // if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        // this -> ID = ++totalID;
+        if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
+        this -> ID = ++totalID;
         this -> data = otherN -> data;
         this -> length = otherN -> length;
         this -> left = nullptr;
         this -> right = nullptr;
-        if (otherN -> left) this -> left = new ConcatStringNode(otherN -> left);
-        if (otherN -> right)this -> right = new ConcatStringNode(otherN -> right);
+        this -> parentTree = ParentsTree();
+        if (otherN -> left){
+            this -> left = new ConcatStringNode(otherN -> left);
+            this -> left -> parentTree.insertParentTreeNode(this);
+        } 
+        if (otherN -> right){
+            this -> right = new ConcatStringNode(otherN -> right);
+            this -> right -> parentTree.insertParentTreeNode(this);
+        }
         this -> leftLength = otherN -> leftLength;
     }
     ConcatStringNode(const char * s){
         this -> data = s;
-        this -> length = data.length();
+        this -> length = strlen(s);
+        this -> leftLength = 0;
         this -> left = nullptr;
         this -> right = nullptr;
-        this -> leftLength = 0;
+        this -> parentTree = ParentsTree();
     }
     int getDataLength(){
-        return this -> data.length();
+        return this -> length;
     }
     void setDataLength(int length){
         this -> length = length;
     }
     char getAtIndex(int index){
         if (left == nullptr && right == nullptr) return data[index];
-        if (leftLength <= index) return  this -> right -> getAtIndex(index - this -> leftLength);
+        if (leftLength <= index) return this -> right -> getAtIndex(index - this -> leftLength);
         else return this -> left -> getAtIndex(index);
     }
     void reverseData(){
@@ -207,32 +217,32 @@ public:
 class ConcatStringTree {
 public:
     ConcatStringNode * root;
-    int treeLength = 0;
     ConcatStringTree(){
         root = nullptr;
     }
     ConcatStringTree(const char * s){
         root = new ConcatStringNode(s);
-        treeLength += root->getDataLength();
+        root -> parentTree.insertParentTreeNode(root);
     };
     ConcatStringTree(const ConcatStringTree * otherT){
         this -> root = new ConcatStringNode(otherT -> root);
+        root -> parentTree.insertParentTreeNode(root);
     }
     int length() const{
-        return treeLength;
+        return root -> length;
     };
     int height(ConcatStringNode * root){
         if (root == nullptr) return 0;
         int lh = height(root -> left);
         int rh = height(root -> right);
         if (lh > rh) {
-            return ++lh;
+            return lh+1;
         } else {
-            return ++rh;
+            return rh+1;
         }
     }
     char get(int index){
-        if (index > treeLength || index < 0) throw out_of_range("Index of string is invalid!");
+        if (index > root -> length|| index < 0) throw out_of_range("Index of string is invalid!");
         return root -> getAtIndex(index);
     };
     bool isCurrentLevel(ConcatStringNode* root, int level, int& checkedLen, char c)
@@ -240,12 +250,12 @@ public:
         if (root == nullptr) return false;
         if (level == 1) {
             if (root -> data != "") {
-                for (int i = 1; i < root -> getDataLength(); i++){
+                for (int i = 0; i < root -> length; i++){
                     if (root -> data[i] == c) return true;
                     checkedLen++;
                 }
             }
-            else checkedLen += root -> getDataLength();
+            else checkedLen += root -> length;
             return false;
         }
         else if (level > 1) {
@@ -253,22 +263,27 @@ public:
             if (isCurrentLevel(root->right, level - 1, checkedLen, c)) return true;
         }
     };
-    int indexOf(ConcatStringNode * root, char c){
+    int checkLevelOrder(ConcatStringNode* root, char c){
+        int h = height(root);
+        int i;
         int checkedLen = 0;
-        int minLength = root -> getDataLength();
-        for (int i = 1; i < height(root); ++i){
-            if (isCurrentLevel(root, i, checkedLen, c)) minLength = min(checkedLen, minLength);
+        int minCheck = root -> length +1;
+        bool check = false;
+        for (i = 1; i <= h; i++) {
+            check = isCurrentLevel(root, i,checkedLen, c);
+            if (check) if (checkedLen < minCheck) minCheck = checkedLen;
             checkedLen = 0;
         }
-        if (minLength = root -> getDataLength() + 1) return -1; 
-        return minLength;
-    }
-    int indexOf(char c){
-        return indexOf(this -> root, c);    
+        if (minCheck == root -> length +1) return -1;
+        return minCheck;
+    };
+    int indexOf(char c)
+    {
+        return checkLevelOrder(this -> root, c);
     };
     string toStringPreOrder(ConcatStringNode * root) const{
         if (!root) return "";
-        string s = "(LL=" + to_string(root -> leftLength) + (string)",L=" + to_string(root -> getDataLength()) + ',' + (string)((root -> data == "") ? "<NULL>);" : '<' +root -> data + ">)" + ";")
+        string s = "(LL=" + to_string(root -> leftLength) + (string)",L=" + to_string(root -> getDataLength()) + ',' + (string)((root -> data == "") ? "<NULL>);" : '"' +root -> data + '"'  + ")" + ";")
             + toStringPreOrder(root -> left) + toStringPreOrder(root -> right);
         return s;
     }
@@ -280,7 +295,7 @@ public:
         return ans.str();
     };
     string toString(ConcatStringNode * root) const{ //inOrder attempt
-        if (!root) return "";
+        if (root == nullptr) return "";
         return toString(root -> left) + root -> data + toString(root -> right);
     }
     string toString() const{
@@ -288,16 +303,18 @@ public:
         return ans + '"' + toString(root) + '"' + "]" ;
     };
     ConcatStringTree concat(const ConcatStringTree & otherS) const{ //uh assignment said do this 
-        ConcatStringTree* result = new ConcatStringTree();  
-        result -> root = new ConcatStringNode();
-        result -> root -> data = "";
-        result -> root -> left = this -> root;
-        result -> root -> right = otherS.root;
-        result -> root -> length = this -> root -> length + otherS.root -> length;
-        result -> root -> leftLength = this -> root -> length;
-        return *result;
+        ConcatStringTree * ans = new ConcatStringTree();  
+        ans -> root = new ConcatStringNode();
+        ans -> root -> right = otherS.root;
+        ans -> root -> left = this -> root;
+        ans -> root -> leftLength = this -> root -> length;
+        ans -> root -> length = this -> root -> length + otherS.root -> length;
+        ans -> root -> parentTree.insertParentTreeNode(ans -> root);
+        root -> parentTree.insertParentTreeNode(ans -> root);
+        otherS.root -> parentTree.insertParentTreeNode(ans -> root);
+        return * ans;
     };
-    ConcatStringNode * trimTree(ConcatStringNode * root, int from, int to) const{
+    ConcatStringNode * trimTree(ConcatStringNode * root, int from, int to) const{ //Inspired by https://leetcode.com/problems/trim-a-binary-search-tree/
         ConcatStringNode * fromRight = root;
         int initialLength = root -> getDataLength() - to;
         int rightDeleted = 0;
@@ -347,11 +364,12 @@ public:
     }
     ConcatStringTree subString(int from, int to) const{
         if (from >= to) throw logic_error("Invalid range");
-        if (from < 0 || to > this -> root -> getDataLength()) throw out_of_range("Index of string is invalid");
-        ConcatStringTree * result = new ConcatStringTree();
-        result -> root = new ConcatStringNode(this -> root);
-        result -> root = result -> trimTree(result -> root, from, to);
-        return *result;
+        if (from < 0 || to >= this -> root -> length) throw out_of_range("Index of string is invalid");
+        ConcatStringTree * ans = new ConcatStringTree();
+        ans -> root = new ConcatStringNode(this -> root);
+        ans -> root -> parentTree.insertParentTreeNode(ans -> root);
+        ans -> root = ans -> trimTree(ans -> root, from, to);
+        return * ans;
     };
     ConcatStringNode* invert(ConcatStringNode * root) {
         if(!root) return nullptr;
@@ -364,9 +382,10 @@ public:
         return root;    
     }
     ConcatStringTree reverse() const{ //invert and reverse
-        ConcatStringTree * result = new ConcatStringTree(this);
-        result -> root = result -> invert(result -> root);
-        return *result;
+        ConcatStringTree * ans = new ConcatStringTree(this);
+        ans -> root -> parentTree.insertParentTreeNode(ans -> root);
+        ans -> root = ans -> invert(ans -> root);
+        return *ans;
     };
 
     int getParTreeSize(const string & query) const{
@@ -377,7 +396,7 @@ public:
             else throw std::runtime_error("Invalid character of query");
             if (temp == nullptr) throw runtime_error("Invalid query: reaching NULL");
         }
-        return temp -> parentTree -> size();
+        return temp -> parentTree.size();
     };
     string getParTreeStringPreOrder(const string & query) const{
         ConcatStringNode * temp = this -> root;
@@ -387,11 +406,12 @@ public:
             else throw std::runtime_error("Invalid character of query");
             if (temp == nullptr) throw runtime_error("Invalid query: reaching NULL");   
         }
-        return temp -> parentTree -> toStringPreOrder();
+        return temp -> parentTree.toStringPreOrder();
     };
 };
 
 class ReducedConcatStringTree; // forward declaration
+class LitStringHash; // forward declaration
 
 class HashConfig {
 private:
@@ -402,18 +422,17 @@ private:
     int initSize;
 
     friend class ReducedConcatStringTree;
+    friend class LitStringHash;
+};
+
+class LitStringHash {
+public:
+    LitStringHash(const HashConfig & hashConfig);
+    int getLastInsertedIndex() const;
+    string toString() const;
 };
 
 class ReducedConcatStringTree /* */ {
-
-public:
-    class LitStringHash {
-    public:
-        LitStringHash(const HashConfig & hashConfig);
-        int getLastInsertedIndex() const;
-        string toString() const;
-    };
-
 public:
     ReducedConcatStringTree(const char * s, LitStringHash * litStringHash);
     LitStringHash * litStringHash;

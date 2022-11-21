@@ -1,11 +1,11 @@
 #include "ConcatStringTree.h"
-
+//g++ -o main main.cpp ConcatStringTree.cpp -I . -std=c++11
 int main() {
-    ConcatStringTree s1 = "never_gonna_";
-    ConcatStringTree s2 = "give_you_up";
-    ConcatStringTree s3 = s1.subString(1, 10);
-    cout << s1.toStringPreOrder() << endl;
-    cout << s3.toString() << endl;
-    cout << s3.reverse().toString() << endl;
-    return 0;
+    ConcatStringTree s1("Hello");
+    ConcatStringTree s2(",_t");
+    ConcatStringTree s3 = s1.concat(s2);
+    cout << s3.toStringPreOrder() << endl;
+    ConcatStringTree s4 = s3.reverse();
+    cout << s4.toStringPreOrder();
+    system("pause");
 }
