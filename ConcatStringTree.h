@@ -137,15 +137,22 @@ public:
             this -> parentRoot = this -> parentRoot -> deleteParentNode(this -> parentRoot, otherN);
             parentTreeSize--;
         }
+        string toStringPreOrderHelper(string s) const{ //very cool ss
+            stringstream ans;
+            ans << s;
+            ans.seekp(-1, ans.cur);
+            ans << "]";
+            return ans.str();
+        };
         string toStringPreOrder(ParentAVLNode * root) const{
             if (!root) return "";
             string s = "(id=" + to_string(root -> parentID) + ")" 
-            + ";" + toStringPreOrder(root -> left) + ";" + toStringPreOrder(root -> right);
+            + ";" + toStringPreOrder(root -> left) + toStringPreOrder(root -> right);
             return s;
         }
         string toStringPreOrder() const{
             string ans = "ParentsTree[";
-            return ans + toStringPreOrder(parentRoot) + "]";
+            return toStringPreOrderHelper(ans + toStringPreOrder(parentRoot));
         }
     };
     string data;
@@ -164,7 +171,8 @@ public:
     ParentsTree parentTree;
     ConcatStringNode(){
         if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        this -> ID = ++totalID;
+        totalID += 1;
+        this -> ID = totalID;
         this -> data = "";
         this -> length = length;
         this -> left = nullptr;
@@ -174,7 +182,8 @@ public:
     };
     ConcatStringNode(const ConcatStringNode * otherN){
         if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
-        this -> ID = ++totalID;
+        totalID += 1;
+        this -> ID = totalID;
         this -> data = otherN -> data;
         this -> length = otherN -> length;
         this -> left = nullptr;
@@ -191,6 +200,9 @@ public:
         this -> leftLength = otherN -> leftLength;
     }
     ConcatStringNode(const char * s){
+        if (totalID + 1 > 10000000) throw std::overflow_error("Id is overflow");
+        totalID += 1;
+        this -> ID = totalID;
         this -> data = s;
         this -> length = strlen(s);
         this -> leftLength = 0;
@@ -213,6 +225,46 @@ public:
         int n = getDataLength();
         for (int i = 0; i < n / 2; i++) swap(data[i], data[n - i - 1]);
     }
+    ~ConcatStringNode(){
+        if (this -> parentTree.size() == 0){
+        this -> data = "\0";
+        this -> length = 0;
+        this -> leftLength = 0;
+        this -> ID = 0;
+        this -> left = nullptr;
+        this -> right = nullptr;
+        }
+    }
+    /*
+    if (this -> parentsList.size() == 0)
+        {
+            this -> data = "\0";
+            this -> len = 0;
+            this -> leftLen = 0;
+            this -> id = 0;
+            ConcatStringNode* tmpL = this -> left;
+            ConcatStringNode* tmpR = this -> right;
+            if (!this -> left && this -> right)
+            {
+                this -> right -> parentsList.deleteNode(this);
+            }
+            else if (this -> left && !this -> right)
+            {
+                this -> left -> parentsList.deleteNode(this);
+            }
+            else if (this -> left && this -> right)
+            {
+                this -> right -> parentsList.deleteNode(this);
+                this -> left -> parentsList.deleteNode(this);
+            }
+            this -> left = nullptr;
+            this -> right = nullptr;
+            if (tmpL) if (tmpL -> parentsList.size() == 0) delete tmpL;
+            if (tmpR) if (tmpR -> parentsList.size() == 0) delete tmpR;
+        }
+        else return;
+    }
+    */
 };
 class ConcatStringTree {
 public:
@@ -263,7 +315,7 @@ public:
             if (isCurrentLevel(root->right, level - 1, checkedLen, c)) return true;
         }
     };
-    int checkLevelOrder(ConcatStringNode* root, char c){
+    int indexOf(ConcatStringNode* root, char c){
         int h = height(root);
         int i;
         int checkedLen = 0;
@@ -277,9 +329,8 @@ public:
         if (minCheck == root -> length +1) return -1;
         return minCheck;
     };
-    int indexOf(char c)
-    {
-        return checkLevelOrder(this -> root, c);
+    int indexOf(char c){
+        return indexOf(this -> root, c);
     };
     string toStringPreOrder(ConcatStringNode * root) const{
         if (!root) return "";
@@ -320,7 +371,7 @@ public:
         int rightDeleted = 0;
         int totalLeftLength = fromRight -> leftLength;
         while (fromRight -> right || fromRight -> left){
-            if (fromRight -> right == nullptr || fromRight -> left == nullptr){
+            if (fromRight -> right == nullptr || fromRight -> left == nullptr){//???????
                 fromRight -> length -= (initialLength - rightDeleted);
                 totalLeftLength -= (fromRight -> left -> length - fromRight -> left -> leftLength);
                 fromRight -> leftLength -= (initialLength - rightDeleted);
@@ -339,27 +390,29 @@ public:
             }
         }
         fromRight -> data = fromRight -> data.substr(0, abs(to - totalLeftLength));
-        fromRight -> length = fromRight -> getDataLength();
+        fromRight -> setDataLength(fromRight -> data.length());
+        //fromRight -> length = fromRight -> getDataLength();
         ConcatStringNode * fromLeft = root;
         int totalLeftDeleted = 0;
         while (fromLeft -> left || fromLeft -> right){
-            if (fromLeft -> left == nullptr && fromLeft -> right == nullptr){
+            if (fromLeft -> left == nullptr || fromLeft -> right == nullptr){//?????
                 fromLeft -> length -= (from - totalLeftDeleted);
                 fromLeft = fromLeft -> left;
             } else if(fromLeft -> leftLength + totalLeftDeleted > from){
-                fromLeft -> left -= (from - totalLeftDeleted);
+                fromLeft -> length -= (from - totalLeftDeleted);
                 fromLeft -> leftLength -= (from - totalLeftDeleted);
                 fromLeft = fromLeft -> left;
             } else {
                 totalLeftDeleted += fromLeft -> leftLength;
-                fromLeft -> length = from;
+                fromLeft -> length -= from;
                 fromLeft -> left = nullptr;
                 fromLeft -> leftLength = 0;
                 fromLeft = fromLeft -> right;
             }
         }
-        fromLeft -> data = fromLeft -> data.substr(from - totalLeftDeleted, fromLeft -> getDataLength() - (from - fromLeft -> leftLength));
-        fromLeft -> length = fromLeft -> getDataLength();
+        fromLeft -> data = fromLeft -> data.substr(from - totalLeftDeleted, fromLeft -> getDataLength());// - (from - totalLeftDeleted));
+        //fromLeft -> length = fromLeft -> getDataLength();
+        fromLeft -> setDataLength(fromLeft -> data.length());
         return root;
     }
     ConcatStringTree subString(int from, int to) const{
@@ -376,7 +429,7 @@ public:
         if (root -> left) invert(root -> left);
         if (root -> right) invert(root -> right);
         swap (root -> left, root -> right);
-        if (root -> left) root -> leftLength = root -> right -> length;
+        if (root -> left) root -> leftLength = root -> left -> length;
         else root -> leftLength = 0;
         if (root ->data != "") root -> reverseData();
         return root;    
@@ -408,6 +461,12 @@ public:
         }
         return temp -> parentTree.toStringPreOrder();
     };
+    ~ConcatStringTree(){
+        root -> parentTree.deleteParentTreeNode(root);
+        ConcatStringNode * temp = this -> root;
+        this -> root = nullptr;
+        if (temp -> parentTree.size() == 0 ) delete temp;
+    }
 };
 
 class ReducedConcatStringTree; // forward declaration
@@ -420,22 +479,97 @@ private:
     double lambda;
     double alpha;
     int initSize;
-
+public:
+    HashConfig(){
+        this -> p = 0;
+        this -> c1 = 0;
+        this -> c2 = 0;
+        this -> lambda = 0;
+        this -> alpha = 0;
+        this -> initSize = 0;
+    }
+    HashConfig(int p, double c1, double c2, double lambda, double alpha, int initSize){
+        this -> p = p;
+        this -> c1 = c1;
+        this -> c2 = c2;
+        this -> lambda = lambda;
+        this -> alpha = alpha;
+        this -> initSize = initSize;
+    }
+    int getP() const{
+        return p;
+    }
+    void setP(int p){
+        this -> p = p;
+    }
+    double getC1() const{
+        return c1;
+    }
+    void setC1(double c1){
+        this -> c1 = c1;
+    }
+    double getC2() const{
+        return c2;
+    }
+    void setC2(double c2){
+        this -> c2 = c2;
+    }
+    double getLambda() const{
+        return lambda;
+    }
+    void setLambda(double lambda){
+        this -> lambda = lambda;
+    }
+    double getAlpha() const{
+        return alpha;
+    }
+    void setAlpha(double alpha){
+        this -> alpha = alpha;
+    }
+    int getInitSize() const{
+        return initSize;
+    }
+    void setInitSize(int initSize){
+        this -> initSize = initSize;
+    }
     friend class ReducedConcatStringTree;
     friend class LitStringHash;
 };
 
 class LitStringHash {
-public:
-    LitStringHash(const HashConfig & hashConfig);
-    int getLastInsertedIndex() const;
-    string toString() const;
+public: 
+    friend class HashConfig;
+    int p;
+    double c1, c2;
+    double lambda;
+    double alpha;
+    int initSize;
+    LitStringHash(const HashConfig & hashConfig){
+        this -> p = hashConfig.getP();
+        this -> c1 = hashConfig.getC1();
+        this -> c2 = hashConfig.getC2();
+        this -> lambda = hashConfig.getLambda();
+        this -> alpha = hashConfig.getAlpha();
+        this -> initSize = hashConfig.getInitSize();
+    };
+    int getLastInsertedIndex() const{
+        return 0;
+    };
+    string toString() const{
+        return "";
+    };
 };
 
-class ReducedConcatStringTree /* */ {
+class ReducedConcatStringTree  /* */ {
 public:
-    ReducedConcatStringTree(const char * s, LitStringHash * litStringHash);
+    char * s;
+    ReducedConcatStringTree(const char * s, LitStringHash * litStringHash){
+        this -> litStringHash = litStringHash;
+    };
     LitStringHash * litStringHash;
+    string toString(){
+        return "";
+    }
 };
 
 #endif // __CONCAT_STRING_TREE_H__
