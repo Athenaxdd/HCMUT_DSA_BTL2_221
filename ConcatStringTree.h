@@ -231,40 +231,21 @@ public:
         this -> length = 0;
         this -> leftLength = 0;
         this -> ID = 0;
+        ConcatStringNode* l = this -> left;
+        ConcatStringNode* r = this -> right;
+        if (this -> left && this -> right){
+            this -> left -> parentTree.deleteParentTreeNode(this);
+            this -> right -> parentTree.deleteParentTreeNode(this);
+        } else if (this -> left && !this -> right) this -> left -> parentTree.deleteParentTreeNode(this);
+        else if (this -> right && !this -> left) this -> right -> parentTree.deleteParentTreeNode(this);
         this -> left = nullptr;
         this -> right = nullptr;
+        if (l && l -> parentTree.size() == 0) delete l;
+        if (r && r -> parentTree.size() == 0) delete r;
+        } else return;
         }
     }
-    /*
-    if (this -> parentsList.size() == 0)
-        {
-            this -> data = "\0";
-            this -> len = 0;
-            this -> leftLen = 0;
-            this -> id = 0;
-            ConcatStringNode* tmpL = this -> left;
-            ConcatStringNode* tmpR = this -> right;
-            if (!this -> left && this -> right)
-            {
-                this -> right -> parentsList.deleteNode(this);
-            }
-            else if (this -> left && !this -> right)
-            {
-                this -> left -> parentsList.deleteNode(this);
-            }
-            else if (this -> left && this -> right)
-            {
-                this -> right -> parentsList.deleteNode(this);
-                this -> left -> parentsList.deleteNode(this);
-            }
-            this -> left = nullptr;
-            this -> right = nullptr;
-            if (tmpL) if (tmpL -> parentsList.size() == 0) delete tmpL;
-            if (tmpR) if (tmpR -> parentsList.size() == 0) delete tmpR;
-        }
-        else return;
-    }
-    */
+
 };
 class ConcatStringTree {
 public:
@@ -371,7 +352,7 @@ public:
         int rightDeleted = 0;
         int totalLeftLength = fromRight -> leftLength;
         while (fromRight -> right || fromRight -> left){
-            if (fromRight -> right == nullptr || fromRight -> left == nullptr){//???????
+            if (fromRight -> right == nullptr && fromRight -> left == nullptr){
                 fromRight -> length -= (initialLength - rightDeleted);
                 totalLeftLength -= (fromRight -> left -> length - fromRight -> left -> leftLength);
                 fromRight -> leftLength -= (initialLength - rightDeleted);
@@ -391,11 +372,10 @@ public:
         }
         fromRight -> data = fromRight -> data.substr(0, abs(to - totalLeftLength));
         fromRight -> setDataLength(fromRight -> data.length());
-        //fromRight -> length = fromRight -> getDataLength();
         ConcatStringNode * fromLeft = root;
         int totalLeftDeleted = 0;
         while (fromLeft -> left || fromLeft -> right){
-            if (fromLeft -> left == nullptr || fromLeft -> right == nullptr){//?????
+            if (fromLeft -> left == nullptr && fromLeft -> right == nullptr){
                 fromLeft -> length -= (from - totalLeftDeleted);
                 fromLeft = fromLeft -> left;
             } else if(fromLeft -> leftLength + totalLeftDeleted > from){
